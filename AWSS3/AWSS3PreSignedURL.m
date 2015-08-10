@@ -150,19 +150,21 @@ static AWSSynchronizedMutableDictionary *_serviceClients = nil;
     if ([contentMD5 length] > 0) {
         [headers setObject:contentMD5 forKey:@"Content-MD5"];
     }
-
-    [queryString appendFormat:@"%@=%@&",@"X-Amz-SignedHeaders",[[AWSSignatureV4Signer getSignedHeadersString:headers] aws_stringWithURLEncoding]];
+    
     
     //add additionalParameters to queryString
     for (NSString *key in requestParameters) {
         id value = requestParameters[key];
         if ([value isKindOfClass:[NSNull class]]) {
-            [queryString appendFormat:@"%@=&",[key aws_stringWithURLEncoding]];
+            [headers setObject:@"" forKey:key];
         } else {
-            [queryString appendFormat:@"%@=%@&",[key aws_stringWithURLEncoding], [value aws_stringWithURLEncoding]];
+            [headers setObject:[requestParameters objectForKey:key] forKey:key];
         }
         
     }
+
+
+    [queryString appendFormat:@"%@=%@&",@"X-Amz-SignedHeaders",[[AWSSignatureV4Signer getSignedHeadersString:headers] aws_stringWithURLEncoding]];
     
     //add security-token if necessary
     if ([credentialsProvider respondsToSelector:@selector(sessionKey)] && [credentialsProvider.sessionKey length] > 0) {
@@ -196,7 +198,7 @@ static AWSSynchronizedMutableDictionary *_serviceClients = nil;
                                                                          query:queryString
                                                                        headers:headers
                                                                  contentSha256:contentSha256];
-    AWSLogDebug(@"AWSS4 PresignedURL Canonical request: [%@]", canonicalRequest);
+    NSLog(@"AWSS4 PresignedURL Canonical request: [%@]", canonicalRequest);
     
     //Generate String to Sign
     NSString *stringToSign = [NSString stringWithFormat:@"%@\n%@\n%@\n%@",
@@ -205,7 +207,7 @@ static AWSSynchronizedMutableDictionary *_serviceClients = nil;
                               scope,
                               [AWSSignatureSignerUtility hexEncode:[AWSSignatureSignerUtility hashString:canonicalRequest]]];
     
-    AWSLogDebug(@"AWS4 PresignedURL String to Sign: [%@]", stringToSign);
+    NSLog(@"AWS4 PresignedURL String to Sign: [%@]", stringToSign);
     
     //Generate Signature
     NSData *kSigning  = [AWSSignatureV4Signer getV4DerivedKey:credentialsProvider.secretKey
